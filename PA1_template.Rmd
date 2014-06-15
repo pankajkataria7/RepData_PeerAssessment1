@@ -2,19 +2,79 @@
 
 
 ## Loading and preprocessing the data
-
-
+```{r echo=TRUE}
+unzip("./RepData_PeerAssessment1/activity.zip")
+data <- read.csv("./RepData_PeerAssessment1/activity.csv")
+data$date = as.Date(data$date, "%Y-%m-%d")
+```
 
 ## What is mean total number of steps taken per day?
+```{r echo=TRUE}
+stepsDay <- aggregate(steps ~ date, data = data, sum, na.rm = TRUE)
+head(stepsDay)
+str(stepsDay)
+hist(stepsDay$steps, xlab="Number of steps taken", main = "Histogram of the total number of steps taken each day")
 
+mean(stepsDay$steps)
 
+median(stepsDay$steps)
+```
 
 ## What is the average daily activity pattern?
+```{r echo=TRUE}
+stepsInterval <- aggregate(steps ~ interval, data = data, mean, na.rm = TRUE)
+plot(steps ~ interval, data = stepsInterval, type = "l")
 
+stepsInterval[which.max(stepsInterval$steps), ]$interval
+```
 
 
 ## Imputing missing values
+```{r echo=TRUE}
+sum(is.na(data$steps))
+```
 
+Replace missing step values with the mean for a given 5-minute interval across the entire observation period
 
+```{r echo=TRUE}
+data$steps2 = data$steps
+for (i in 1:length(data$steps)) if (is.na(data$steps[i])) {
+    data$steps2[i] = mean(data$steps, na.rm = TRUE)
+}
+```
 
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r echo=TRUE}
+dataNew = data.frame(steps = data$steps2, date = data$date, interval = data$interval)
+
+stepsDayNew = aggregate(steps ~ date, data = dataNew, sum)
+
+hist(stepsDayNew$steps)
+
+mean(stepsDayNew$steps, na.rm = TRUE)
+
+median(stepsDayNew$steps, na.rm = TRUE)
+```
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+```{r echo = TRUE}
+day = weekdays(dataNew$date)
+dayType = vector()
+for (item in day) {
+    if (item == "Saturday" || item == "Sunday") {
+        dayType = append(dayType, "weekend")
+    } else {
+        dayType = append(dayType, "weekday")
+    }
+}
+dataNew$dayType = factor(dayType)
+
+avgStepsNew = data.frame(xtabs(steps ~ interval + dayType, aggregate(steps ~ 
+    interval + dayType, dataNew, mean)))
+
+library(ggplot2)
+
+qplot(interval, Freq, data = avgStepsNew, facets = dayType ~ .)
+```
